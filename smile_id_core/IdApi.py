@@ -1,30 +1,13 @@
 import json
 from smile_id_core.Signature import Signature
 from smile_id_core.Utilities import Utilities
-from smile_id_core.ServerError import ServerError
+from smile_id_core.exceptions import ServerError
 import requests
 
 __all__ = ["IdApi"]
 
 
 class IdApi:
-    timestamp = 0
-    sec_key = ""
-
-    def __init__(self, partner_id, api_key, sid_server):
-        if not partner_id or not api_key:
-            raise ValueError("partner_id or api_key cannot be null or empty")
-        self.partner_id = partner_id
-        self.api_key = api_key
-        if sid_server in [0, 1]:
-            sid_server_map = {
-                0: "https://3eydmgh10d.execute-api.us-west-2.amazonaws.com/test",
-                1: "https://la7am6gdm8.execute-api.us-west-2.amazonaws.com/prod",
-            }
-            self.url = sid_server_map[sid_server]
-        else:
-            self.url = sid_server
-
     def submit_job(self, partner_params, id_params, use_validation_api=True):
         Utilities.validate_partner_params(partner_params)
 
@@ -55,10 +38,6 @@ class IdApi:
                 )
             )
         return response
-
-    def __get_sec_key(self):
-        sec_key_gen = Signature(self.partner_id, self.api_key)
-        return sec_key_gen.generate_sec_key()
 
     def __configure_json(self, partner_params, id_params, sec_key, timestamp):
         payload = {

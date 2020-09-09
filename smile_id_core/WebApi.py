@@ -3,33 +3,74 @@ import time
 
 import requests
 
+from smile_id_core.api_base import ApiBase
+from smile_id_core.constants import Servers
 from smile_id_core.image_upload import generate_zip_file, validate_images
 from smile_id_core.IdApi import IdApi
 from smile_id_core.Signature import Signature
 from smile_id_core.Utilities import Utilities
 from smile_id_core.ServerError import ServerError
+import zipfile
 
 __all__ = ["WebApi"]
 
 
-class WebApi:
-    def __init__(self, partner_id, call_back_url, api_key, sid_server):
-        if not partner_id or not api_key:
-            raise ValueError("partner_id or api_key cannot be null or empty")
-        self.partner_id = partner_id
-        self.call_back_url = call_back_url
-        self.api_key = api_key
-        self.sid_server = sid_server
-        self.utilities = None
+class WebApi(ApiBase):
+    class Urls:
+        GET_JOB_STATUS = '{server_url}/job_status'
+        GET_SERVICES = '{server_url}/services'
+        VERIFY_DOCUMENT = '{server_url}/id_verification'
 
-        if sid_server in [0, 1]:
-            sid_server_map = {
-                0: "https://3eydmgh10d.execute-api.us-west-2.amazonaws.com/test",
-                1: "https://la7am6gdm8.execute-api.us-west-2.amazonaws.com/prod",
-            }
-            self.url = sid_server_map[sid_server]
-        else:
-            self.url = sid_server
+    def __init__(self, partner_id: str, api_key: str, server_url: str, call_back_url: str = None):
+        super().__init__(partner_id, api_key, server_url)
+        self.call_back_url = call_back_url
+
+    @classmethod
+    def create_api(cls, partner_id: str, api_key: str, call_back_url: str = None):
+        return cls(partner_id, api_key, server_url=Servers.LIVE_SERVER_URL, call_back_url=call_back_url)
+
+    @classmethod
+    def create_test_api(cls, partner_id: str, api_key: str, call_back_url: str = None):
+        return cls(partner_id, api_key, server_url=Servers.LIVE_SERVER_URL, call_back_url=call_back_url)
+
+    def get_services(self):
+        response = self._make_request("GET", self.Urls.GET_SERVICES)
+        return response.json()
+
+    get_smile_id_services = get_services
+
+    def get_job_status(self, user_id, job_id, return_history=False, return_images=False):
+        """
+
+        :param user_id: the `user_id` parameter that was passed to the job
+        :param job_id: the `job_id` parameter that was passed to the job
+        :param return_history:
+        :param return_images:
+        :return: dict
+        """
+        signature, timestamp = self._get_signature()
+
+        data = {
+            "sec_key": signature,
+            "timestamp": timestamp,
+            "partner_id": self.partner_id,
+            "job_id": job_id,
+            "user_id": user_id,
+            "image_links": return_images,
+            "history": return_history,
+        }
+        response = self._make_request("POST", self.Urls.GET_JOB_STATUS, data=data)
+
+        job_status_json_resp = response.json()
+        timestamp = job_status_json_resp["timestamp"]
+        server_signature = job_status_json_resp["signature"]
+        signature = Signature(self.partner_id, self.api_key)
+        valid = signature.confirm_sec_key(timestamp, server_signature)
+        if not valid:
+            raise ServerError(
+                "Unable to confirm validity of the job_status response"
+            )
+        return job_status_json_resp
 
     def submit_job(
         self,
@@ -116,9 +157,6 @@ class WebApi:
                 )
 
             if options_params["return_job_status"]:
-                self.utilities = Utilities(
-                    self.partner_id, self.api_key, self.sid_server
-                )
                 job_status = self.poll_job_status(
                     0,
                     partner_params,
@@ -132,10 +170,6 @@ class WebApi:
                 return job_status
             else:
                 return {"success": True, "smile_job_id": smile_job_id}
-
-    def __call_id_api(self, partner_params, id_info_params, use_validation_api):
-        id_api = IdApi(self.partner_id, self.api_key, self.sid_server)
-        return id_api.submit_job(partner_params, id_info_params, use_validation_api)
 
     def __validate_options(self, options_params):
         if not self.call_back_url and not options_params:
@@ -183,7 +217,7 @@ class WebApi:
         else:
             time.sleep(4)
 
-        job_status = self.utilities.get_job_status(
+        job_status = self.get_job_status(
             partner_params, options_params, sec_key, timestamp
         )
         job_status_response = job_status.json()

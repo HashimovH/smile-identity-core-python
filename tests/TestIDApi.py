@@ -99,7 +99,7 @@ class TestIdApi(unittest.TestCase):
 
     def get_id_response(self):
         timestamp = int(time.time())
-        sec_timestamp = self.signatureObj.generate_sec_key(timestamp=timestamp)
+        signature, _ = self.signatureObj.generate_sec_key(timestamp=timestamp)
         return {
             "JSONVersion": "1.0.0",
             "SmileJobID": "0000000324",
@@ -129,7 +129,7 @@ class TestIdApi(unittest.TestCase):
             "FullData": {},
             "Source": "ID API",
             "timestamp": timestamp,
-            "signature": sec_timestamp["sec_key"],
+            "signature": signature,
         }
 
     @staticmethod
