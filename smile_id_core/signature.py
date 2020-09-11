@@ -13,9 +13,11 @@ class Signature:
         if not partner_id or not api_key:
             raise ValueError("partner_id or api_key cannot be null or empty")
         self.partner_id = partner_id
-        self.api_key = api_key
-        self.decoded_api_key = api_key  # base64.b64decode(self.api_key)
-        self.public_key = RSA.importKey(self.decoded_api_key)
+        try:
+            decoded_api_key = base64.b64decode(api_key)
+        except Exception:
+            decoded_api_key = api_key
+        self.public_key = RSA.importKey(decoded_api_key)
         self.cipher = PKCS1_v1_5.new(self.public_key)
 
     def generate_sec_key(self, timestamp=None) -> Tuple[str, int]:

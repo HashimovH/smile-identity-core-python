@@ -45,12 +45,8 @@ class Utilities:
             return
 
         for field in ["country", "id_type", "id_number"]:
-            if field in id_info_params:
-                if id_info_params[field]:
-                    continue
-                else:
-                    raise ValueError("key " + field + " cannot be empty")
-            else:
+            value = id_info_params.get(field)
+            if not value:
                 raise ValueError("key " + field + " cannot be empty")
         if not use_validation_api:
             return

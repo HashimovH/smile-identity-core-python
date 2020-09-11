@@ -4,6 +4,10 @@ import io
 import os
 
 
+from smile_id_core.constants import ImageTypes
+from smile_id_core.exceptions import InvalidDataFormat
+
+
 class ApiVersion:
     BUILD_NUMBER = 0
     MAJOR_VERSION = 2
@@ -110,14 +114,17 @@ def prepare_image_entry_dict(image, image_type_id, **_):
 
 def validate_images(images_params):
     if not images_params:
-        raise ValueError("Please ensure that you send through image details")
+        raise InvalidDataFormat("Please ensure that you send through image details")
 
     if not isinstance(images_params, list):
-        raise ValueError(
+        raise InvalidDataFormat(
             "Please ensure that you send through image details as a list"
         )
 
     for image in images_params:
+        if image["image_type_id"] not in ImageTypes.ALL:
+            raise InvalidDataFormat(f"Unknown image type id {image['image_type_id']}")
+
         if image["image"].lower().endswith(IMAGE_FILE_EXTENSIONS):
             if not os.path.exists(image["image"]):
                 raise FileNotFoundError(
