@@ -37,16 +37,20 @@ class WebApiTest(ApiBase):
     get_smile_id_services = get_services
 
     @classmethod
-    def validate_id_params(cls, country: str, id_type: str, id_number: str):
+    def validate_id_params(cls, data, service_request=False) -> dict:
         """
         Take the response from get_services() and check that
 
-        :param country:
-        :param id_type:
-        :param id_number:
+        :param data: a dict containing fields for a document verification request
+        :param service_request: whether to perform an API request to get the latest validation schema
         :return:
         """
-        pass
+        if service_request:
+            verification_schema = cls.get_services()
+        else:
+            verification_schema = None
+
+        return IdValidation.validate(data, verification_schema)
 
     def verify_document(
         self,
@@ -58,6 +62,7 @@ class WebApiTest(ApiBase):
         dob: Union[str, date] = None,
     ):
         """
+        Performs a document verification request with an immediate response.
 
         :param country:
         :param id_type:
@@ -68,12 +73,13 @@ class WebApiTest(ApiBase):
 
         :return: dict
         """
-        signature, timestamp = self._get_signature()
 
         try:
             dob = dob.isoformat()
-        except Exception:
+        except AttributeError:
             pass
+
+        signature, timestamp = self._get_signature()
 
         payload = {
             "sec_key": signature,
@@ -88,7 +94,16 @@ class WebApiTest(ApiBase):
             "id_type": id_type,
             "id_number": id_number,
         }
+
+        if dob:
+            payload["dob"] = dob
+        if first_name:
+            payload["first_name"] = first_name
+        if last_name:
+            payload["last_name"] = last_name
+
         response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT, payload)
+
         assert isinstance(response, dict)
         if response.get("ResultCode") != StatusCodes.SUCCESS:
             raise VerificationFailed(response)

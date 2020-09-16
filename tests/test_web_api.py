@@ -5,7 +5,7 @@ import requests
 
 from smile_id_core import WebApiTest, signature
 from smile_id_core.constants import StatusCodes
-from smile_id_core.exceptions import VerificationFailed
+from smile_id_core.exceptions import InvalidDataFormat, VerificationFailed
 
 
 class FakeResponse:
@@ -56,3 +56,44 @@ def test_verify_document_success(api):
         response = api.verify_document("country", "id_type", "id_number")
 
         assert response["ResultText"] == "success"
+
+
+def test_validation_success():
+    data = {"country": "GH", "id_type": "DRIVERS_LICENSE", "id_number": "test"}
+    assert WebApiTest.validate_id_params(data) == data
+
+    data = {
+        "country": "NG",
+        "id_type": "DRIVERS_LICENSE",
+        "id_number": "test",
+        "first_name": "test",
+        "last_name": "test",
+        "dob": "2020-01-02",
+    }
+    assert WebApiTest.validate_id_params(data) == data
+
+
+def test_validation_failure():
+    data = {}
+    with pytest.raises(InvalidDataFormat) as e:
+        WebApiTest.validate_id_params(data)
+        assert e.match("field `country` is required")
+
+    data = {"country": "XX", "id_type": "DRIVERS_LICENSE", "id_number": "test"}
+    with pytest.raises(InvalidDataFormat) as e:
+        WebApiTest.validate_id_params(data)
+        assert e.match("Country 'XX' is not supported")
+
+    data = {"country": "NG", "id_type": "UNKNOWN", "id_number": "test"}
+    with pytest.raises(InvalidDataFormat) as e:
+        WebApiTest.validate_id_params(data)
+        assert e.match(f"Country 'NG' does not support document type 'UNKNOWN'")
+
+    data = {
+        "country": "NG",
+        "id_type": "DRIVERS_LICENSE",
+        "id_number": "test",
+    }
+    with pytest.raises(InvalidDataFormat) as e:
+        WebApiTest.validate_id_params(data)
+        assert e.match("fields are missing or empty: [dob,first_name,last_name]")
