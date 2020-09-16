@@ -30,13 +30,22 @@ class Signature:
         return signature, timestamp
 
     def _get_hash(self, timestamp):
+        """
+        As per docs:
+
+        > In the calculation of the signature use an integer for your partner ID, everywhere else use a string
+
+        https://docs.smileidentity.com/products/core-libraries/restful-integration/api-access
+
+        :param timestamp:
+        :return:
+        """
         to_hash = "{}:{}".format(int(self.partner_id), timestamp)
-        new_hash = str(to_hash).encode("utf-8")
-        return hashlib.sha256(new_hash).hexdigest()
+        return hashlib.sha256(to_hash.encode("utf-8")).hexdigest()
 
     def confirm_sec_key(self, timestamp, sec_key):
-        encrypted, hashed = sec_key.split("|")
-        local_hash = self._get_hash(timestamp)
+        # encrypted, hashed = sec_key.split("|")
+        # local_hash = self._get_hash(timestamp)
         # python libraries only allow decryption from a private key
         # TODO: re look at this
         return True

@@ -5,12 +5,13 @@ import zipfile
 
 import pytest
 
+from smile_id_core.constants import ImageTypes
 from smile_id_core.image_upload import (
     prepare_image_entry_dict,
     prepare_info_json,
     generate_zip_file,
     prepare_image_payload,
-    validate_images
+    validate_images,
 )
 
 
@@ -31,7 +32,7 @@ def test_prepare_info_json():
     image_params = [
         {
             "image": "directory/file.jpg",
-            "image_type_id": 5,
+            "image_type_id": ImageTypes.SELFIE,
         }
     ]
 
@@ -90,7 +91,7 @@ def test_validate_images__ok_file_exists(temp_image_file):
     image_params = [
         {
             "image": temp_image_file,
-            "image_type_id": 5,
+            "image_type_id": ImageTypes.SELFIE,
         }
     ]
 
@@ -101,11 +102,9 @@ def test_validate_images__error_file_not_found():
     image_params = [
         {
             "image": "nonexistent/file.jpg",
-            "image_type_id": 5,
+            "image_type_id": ImageTypes.SELFIE,
         }
     ]
 
     with pytest.raises(FileNotFoundError):
         validate_images(image_params)
-
-

@@ -23,10 +23,12 @@ def test_generate_sec_key(signature):
     sig_key, sig_timestamp = signature.generate_sec_key(timestamp=timestamp)
     assert sig_timestamp == timestamp
 
-    hashed = hashlib.sha256(
-        "{}:{}".format(signature.partner_id, timestamp).encode("utf-8")
+    encrypted, hashed = sig_key.split("|")
+    assert hashed == signature._get_hash(timestamp)
+
+    hashed2 = hashlib.sha256(
+        "{}:{}".format(int(signature.partner_id), timestamp).encode("utf-8")
     ).hexdigest()
-    encrypted, hashed2 = sig_key.split("|")
     assert hashed == hashed2
 
 

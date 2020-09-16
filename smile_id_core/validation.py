@@ -24,11 +24,17 @@ class IdValidation:
                 value = data[field]
             except KeyError:
                 if required:
-                    raise InvalidDataFormat(f"ID validation request field `{field}` is required")
+                    raise InvalidDataFormat(
+                        f"ID validation request field `{field}` is required"
+                    )
             else:
                 if not value and required:
-                    raise InvalidDataFormat(f"ID validation request field `{field}` can not be empty")
+                    raise InvalidDataFormat(
+                        f"ID validation request field `{field}` can not be empty"
+                    )
                 if not isinstance(value, str):
-                    raise InvalidDataFormat(f"ID validation request field `{field}` must be a string")
+                    raise InvalidDataFormat(
+                        f"ID validation request field `{field}` must be a string"
+                    )
                 result[field] = value
         return result

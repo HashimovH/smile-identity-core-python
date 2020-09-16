@@ -6,8 +6,8 @@ from typing import Union
 import requests
 
 from smile_id_core.api_base import ApiBase
-from smile_id_core.constants import Servers, JobTypes
-from smile_id_core.exceptions import ServerError
+from smile_id_core.constants import Servers, JobTypes, StatusCodes
+from smile_id_core.exceptions import ServerError, VerificationFailed
 from smile_id_core.image_upload import generate_zip_file, validate_images
 from smile_id_core.validation import IdValidation
 
@@ -18,10 +18,10 @@ class WebApiTest(ApiBase):
     SERVER_URL = Servers.TEST_SERVER_URL
 
     class Urls:
-        GET_JOB_STATUS = '{server_url}/job_status'
-        GET_SERVICES = '{server_url}/services'
-        UPLOAD = '{server_url}/upload'
-        VERIFY_DOCUMENT = '{server_url}/id_verification'
+        GET_JOB_STATUS = "{server_url}/job_status"
+        GET_SERVICES = "{server_url}/services"
+        UPLOAD = "{server_url}/upload"
+        VERIFY_DOCUMENT = "{server_url}/id_verification"
 
     def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
         super().__init__(partner_id, api_key)
@@ -48,7 +48,15 @@ class WebApiTest(ApiBase):
         """
         pass
 
-    def verify_document(self, country: str, id_type: str, id_number: str, *, first_name: str = None, last_name: str=None, dob: Union[str,date] = None):
+    def verify_document(
+        self,
+        country: str,
+        id_type: str,
+        id_number: str,
+        first_name: str = None,
+        last_name: str = None,
+        dob: Union[str, date] = None,
+    ):
         """
 
         :param country:
@@ -74,15 +82,21 @@ class WebApiTest(ApiBase):
             "partner_params": {
                 "job_id": str(uuid.uuid4()),
                 "user_id": str(uuid.uuid4()),
-                "job_type": JobTypes.VERIFY_DOCUMENT
+                "job_type": JobTypes.VERIFY_DOCUMENT,
             },
             "country": country,
             "id_type": id_type,
             "id_number": id_number,
         }
-        return self._make_request("POST", self.Urls.VERIFY_DOCUMENT, payload)
+        response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT, payload)
+        assert isinstance(response, dict)
+        if response.get("ResultCode") != StatusCodes.SUCCESS:
+            raise VerificationFailed(response)
+        return response
 
-    def get_job_status(self, user_id, job_id, return_history=False, return_images=False):
+    def get_job_status(
+        self, user_id, job_id, return_history=False, return_images=False
+    ):
         """
 
         :param user_id: the `user_id` parameter that was passed to the job
@@ -108,18 +122,16 @@ class WebApiTest(ApiBase):
         server_signature = response["signature"]
         valid = self.signature.confirm_sec_key(timestamp, server_signature)
         if not valid:
-            raise ServerError(
-                "Unable to confirm validity of the job_status response"
-            )
+            raise ServerError("Unable to confirm validity of the job_status response")
         return response
 
     def submit_job(
-            self,
-            job_type: int,
-            images_params,
-            id_info_params,
-            job_id: str = None,
-            user_id: str = None,
+        self,
+        job_type: int,
+        images_params,
+        id_info_params,
+        job_id: str = None,
+        user_id: str = None,
     ):
         if job_type == JobTypes.VERIFY_DOCUMENT:
             data = IdValidation.validate(id_info_params)
@@ -167,18 +179,22 @@ class WebApiTest(ApiBase):
         )
         self.upload(upload_url, zip_stream)
         return {
-            "success": True, "smile_job_id": smile_job_id,
-            "user_id": user_id, "job_id": job_id}
+            "success": True,
+            "smile_job_id": smile_job_id,
+            "user_id": user_id,
+            "job_id": job_id,
+        }
 
-    def poll_job_status(self,
-                        user_id,
-                        job_id,
-                        return_history=False,
-                        return_images=False,
-                        max_polls=20,
-                        delay=2,
-                        counter=0
-                        ):
+    def poll_job_status(
+        self,
+        user_id,
+        job_id,
+        return_history=False,
+        return_images=False,
+        max_polls=20,
+        delay=2,
+        counter=0,
+    ):
         if counter > max_polls:
             raise ServerError(
                 f"Failed to get job status in {max_polls} attempts: user_id={user_id}, job_id={job_id}"
@@ -189,7 +205,15 @@ class WebApiTest(ApiBase):
         job_status = self.get_job_status(user_id, job_id, return_history, return_images)
         if job_status["job_complete"]:
             return job_status
-        return self.poll_job_status(user_id, job_id, return_history, return_images, max_polls, delay, counter + 1)
+        return self.poll_job_status(
+            user_id,
+            job_id,
+            return_history,
+            return_images,
+            max_polls,
+            delay,
+            counter + 1,
+        )
 
     @staticmethod
     def upload(url, file):
