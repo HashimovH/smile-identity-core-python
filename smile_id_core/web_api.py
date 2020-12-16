@@ -175,7 +175,7 @@ class WebApiTest(ApiBase):
             "callback_url": self.call_back_url,
         }
 
-        prep_upload_json_resp = WebApi._make_request(
+        prep_upload_json_resp = self._make_request(
             "POST",
             self.Urls.UPLOAD,
             payload,
