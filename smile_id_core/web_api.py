@@ -60,6 +60,8 @@ class WebApiTest(ApiBase):
         first_name: str = None,
         last_name: str = None,
         dob: Union[str, date] = None,
+        job_id: str = None,
+        user_id: str = None,
     ):
         """
         Performs a document verification request with an immediate response.
@@ -70,6 +72,8 @@ class WebApiTest(ApiBase):
         :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
         :param last_name: Optional; required for some ID types
         :param dob: Optional; required for some ID types. Can be a date
+        :param job_id: Optional; Will be passed to SmileID as partner parameters
+        :param user_id: Optional; Will be passed to SmileID as partner parameters
 
         :return: dict
         """
@@ -86,8 +90,8 @@ class WebApiTest(ApiBase):
             "timestamp": timestamp,
             "partner_id": self.partner_id,
             "partner_params": {
-                "job_id": str(uuid.uuid4()),
-                "user_id": str(uuid.uuid4()),
+                "job_id": job_id or str(uuid.uuid4()),
+                "user_id": user_id or str(uuid.uuid4()),
                 "job_type": JobTypes.VERIFY_DOCUMENT,
             },
             "country": country,
