@@ -16,14 +16,17 @@ __all__ = ["WebApi", "WebApiLive", "WebApiTest"]
 
 class WebApiTest(ApiBase):
     SERVER_URL = Servers.TEST_SERVER_URL
+    SERVER_URL_ASYNC = Servers.TEST_SERVER_URLV2
 
     class Urls:
         GET_JOB_STATUS = "{server_url}/job_status"
         GET_SERVICES = "{server_url}/services"
         UPLOAD = "{server_url}/upload"
         VERIFY_DOCUMENT = "{server_url}/id_verification"
+        VERIFY_DOCUMENT_ASYNC = "{server_url}/verify_async"
 
     def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
+
         super().__init__(partner_id, api_key)
         self.call_back_url = call_back_url
 
@@ -51,6 +54,67 @@ class WebApiTest(ApiBase):
             verification_schema = None
 
         return IdValidation.validate(data, verification_schema)
+
+    def verify_document_async(
+        self,
+        country: str,
+        id_type: str,
+        id_number: str,
+        first_name: str = None,
+        last_name: str = None,
+        dob: Union[str, date] = None,
+        job_id: str = None,
+        user_id: str = None,
+    ):
+        """
+            Performs a document verification request in async way
+
+            :param country:
+            :param id_type:
+            :param id_number:
+            :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
+            :param last_name: Optional; required for some ID types
+            :param dob: Optional; required for some ID types. Can be a date
+            :param job_id: Optional; Will be passed to SmileID as partner parameters
+            :param user_id: Optional; Will be passed to SmileID as partner parameters
+
+            :return: dict
+        """
+
+        try:
+            dob = dob.isoformat()
+        except AttributeError:
+            pass
+
+        signature, timestamp = self._get_signature()
+
+        payload = {
+            "sec_key": signature,
+            "timestamp": timestamp,
+            "partner_id": self.partner_id,
+            "partner_params": {
+                "job_id": job_id or str(uuid.uuid4()),
+                "user_id": user_id or str(uuid.uuid4()),
+                "job_type": JobTypes.VERIFY_DOCUMENT,
+            },
+            "country": country,
+            "id_type": id_type,
+            "id_number": id_number,
+            "first_name": "",
+            "last_name": "",
+            "callback_url": self.call_back_url
+        }
+
+        if dob:
+            payload["dob"] = dob
+        if first_name:
+            payload["first_name"] = first_name
+        if last_name:
+            payload["last_name"] = last_name
+
+        response = self._make_request_async("POST", self.Urls.VERIFY_DOCUMENT_ASYNC, payload)
+
+        return response
 
     def verify_document(
         self,
@@ -97,6 +161,9 @@ class WebApiTest(ApiBase):
             "country": country,
             "id_type": id_type,
             "id_number": id_number,
+            "first_name": "",
+            "last_name": "",
+            "callback_url": self.call_back_url
         }
 
         if dob:
@@ -256,7 +323,11 @@ class WebApiTest(ApiBase):
 
 
 class WebApiLive(WebApiTest):
-    SERVER_URL = Servers.LIVE_SERVER_URL
+    def __init__(self):
+        if self.api_version == 1:
+            ApiBase.SERVER_URL = Servers.LIVE_SERVER_URL
+        else:
+            ApiBase.SERVER_URL = Servers.LIVE_SERVER_URLV2
 
 
 WebApi = WebApiTest

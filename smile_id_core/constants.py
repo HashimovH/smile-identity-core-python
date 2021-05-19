@@ -1,6 +1,9 @@
 class Servers:
     TEST_SERVER_URL = "https://3eydmgh10d.execute-api.us-west-2.amazonaws.com/test"
     LIVE_SERVER_URL = "https://la7am6gdm8.execute-api.us-west-2.amazonaws.com/prod"
+    # 2 New urls for version 2
+    TEST_SERVER_URLV2 = "https://testapi.smileidentity.com/v2"
+    LIVE_SERVER_URLV2 = "https://api.smileidentity.com/v2/"
 
 
 class JobTypes:
