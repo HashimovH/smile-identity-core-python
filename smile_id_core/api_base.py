@@ -9,7 +9,6 @@ from smile_id_core.signature import Signature
 
 class ApiBase:
     SERVER_URL: str
-    SERVER_URL_ASYNC: str
     """This can be one of `constants.Servers` entries"""
 
     def __init__(self, partner_id: str, api_key: str):
@@ -40,7 +39,7 @@ class ApiBase:
         if method != "get" and data is not None:
             data = json.dumps(data)
 
-        url = url.format(server_url=cls.SERVER_URL)
+        url = url.format(server_url=cls.SERVER_URL, api_version=1)
 
         response: requests.Response = request(
             url,
@@ -75,7 +74,7 @@ class ApiBase:
         if method != "get" and data is not None:
             data = json.dumps(data)
 
-        url = url.format(server_url=cls.SERVER_URL_ASYNC)
+        url = url.format(server_url=cls.SERVER_URL, api_version=2)
 
         response: requests.Response = request(
             url,
