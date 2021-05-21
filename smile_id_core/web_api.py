@@ -24,7 +24,7 @@ class WebApiTest(ApiBase):
         VERIFY_DOCUMENT = "{server_url}/v{api_version}/id_verification"
         VERIFY_DOCUMENT_ASYNC = "{server_url}/v{api_version}/verify_async"
 
-    def __init__(self, partner_id: str, api_key: str, api_version: int = 1, call_back_url: str = None):
+    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None, api_version: int = 1):
 
         super().__init__(partner_id, api_key)
         self.call_back_url = call_back_url
@@ -66,6 +66,20 @@ class WebApiTest(ApiBase):
             job_id: str = None,
             user_id: str = None,
     ):
+        """
+            Builds the payload for the request with the following parameters
+
+            :param country:
+            :param id_type:
+            :param id_number:
+            :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
+            :param last_name: Optional; required for some ID types
+            :param dob: Optional; required for some ID types. Can be a date
+            :param job_id: Optional; Will be passed to SmileID as partner parameters
+            :param user_id: Optional; Will be passed to SmileID as partner parameters
+
+            :return: dict
+        """
         try:
             dob = dob.isoformat()
         except AttributeError:
@@ -102,21 +116,14 @@ class WebApiTest(ApiBase):
         **data
     ):
         """
-            Performs a document verification request in async way
-
-            :param country:
-            :param id_type:
-            :param id_number:
-            :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
-            :param last_name: Optional; required for some ID types
-            :param dob: Optional; required for some ID types. Can be a date
-            :param job_id: Optional; Will be passed to SmileID as partner parameters
-            :param user_id: Optional; Will be passed to SmileID as partner parameters
+            Performs a document verification request with an immediate response in async way.
+            **data consists of parameters for _prepare_document_verification_payload() method above to create payload
+            for request.
 
             :return: dict
         """
         payload = self._prepare_document_verification_payload(**data)
-        response = self._make_request_async("POST", self.Urls.VERIFY_DOCUMENT_ASYNC, payload)
+        response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT_ASYNC, payload, api_version=2)
         return response
 
     def verify_document(
@@ -124,20 +131,11 @@ class WebApiTest(ApiBase):
         **data
     ):
         """
-        Performs a document verification request with an immediate response.
-
-        :param country:
-        :param id_type:
-        :param id_number:
-        :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
-        :param last_name: Optional; required for some ID types
-        :param dob: Optional; required for some ID types. Can be a date
-        :param job_id: Optional; Will be passed to SmileID as partner parameters
-        :param user_id: Optional; Will be passed to SmileID as partner parameters
-
-        :return: dict
+            Performs a document verification request with an immediate response.
+             **data consists of parameters for _prepare_document_verification_payload() method above to create payload
+             for request.
+            :return: dict
         """
-
         payload = self._prepare_document_verification_payload(**data)
         response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT, payload)
 
