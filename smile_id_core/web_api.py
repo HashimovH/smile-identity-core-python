@@ -11,31 +11,28 @@ from smile_id_core.exceptions import ServerError, VerificationFailed
 from smile_id_core.image_upload import generate_zip_file, validate_images
 from smile_id_core.validation import IdValidation
 
-__all__ = ["WebApi", "WebApiLive", "WebApiTest"]
+__all__ = ["WebApi", "WebApiV2", "WebApiLiveV1", "WebApiLiveV2", "WebApiTestV1", "WebApiTestV2"]
 
 
-class WebApiTest(ApiBase):
+class WebApiBase(ApiBase):
     SERVER_URL = Servers.TEST_SERVER_URL
 
     class Urls:
+        """ API Base URL which are the same for each version """
         GET_JOB_STATUS = "{server_url}/v{api_version}/job_status"
         GET_SERVICES = "{server_url}/v{api_version}/services"
         UPLOAD = "{server_url}/v{api_version}/upload"
-        VERIFY_DOCUMENT = "{server_url}/v{api_version}/id_verification"
-        VERIFY_DOCUMENT_ASYNC = "{server_url}/v{api_version}/verify_async"
 
     def __init__(self, partner_id: str, api_key: str, call_back_url: str = None, api_version: int = 1):
-
-        super().__init__(partner_id, api_key)
+        super().__init__(partner_id, api_key, api_version)
         self.call_back_url = call_back_url
         self.api_version = api_version
 
-    @classmethod
-    def get_services(cls):
+    def get_services(self):
         """
         This method does not require API keys or partner ID
         """
-        return cls._make_request("GET", cls.Urls.GET_SERVICES)
+        return self._make_request("GET", self.Urls.GET_SERVICES)
 
     get_smile_id_services = get_services
 
@@ -111,25 +108,7 @@ class WebApiTest(ApiBase):
 
         return payload
 
-    def verify_document_async(
-        self,
-        **data
-    ):
-        """
-            Performs a document verification request with an immediate response in async way.
-            **data consists of parameters for _prepare_document_verification_payload() method above to create payload
-            for request.
-
-            :return: dict
-        """
-        payload = self._prepare_document_verification_payload(**data)
-        response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT_ASYNC, payload, api_version=2)
-        return response
-
-    def verify_document(
-        self,
-        **data
-    ):
+    def verify_document(self, **data):
         """
             Performs a document verification request with an immediate response.
              **data consists of parameters for _prepare_document_verification_payload() method above to create payload
@@ -137,11 +116,24 @@ class WebApiTest(ApiBase):
             :return: dict
         """
         payload = self._prepare_document_verification_payload(**data)
-        response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT, payload)
+        response = self._make_request("POST", self.Urls.DOCUMENT_VERIFICATION,
+                                      payload)
 
         assert isinstance(response, dict)
         if response.get("ResultCode") != StatusCodes.SUCCESS:
             raise VerificationFailed(response)
+        return response
+
+    def verify_document_async(self, **data):
+        """
+            Performs a document verification request with an immediate response.
+             **data consists of parameters for _prepare_document_verification_payload() method above to create payload
+             for request.
+            :return: dict
+        """
+        payload = self._prepare_document_verification_payload(**data)
+        response = self._make_request("POST", self.Urls.ASYNC_DOCUMENT_VERIFICATION,
+                                      payload)
         return response
 
     def get_job_status(
@@ -286,8 +278,35 @@ class WebApiTest(ApiBase):
         return resp
 
 
-class WebApiLive(WebApiTest):
+class WebApiTestV1(WebApiBase):
+
+    class Urls(WebApiBase.Urls):
+        """ Inherited from Urls class From WebApiBase class and adds new fields """
+        DOCUMENT_VERIFICATION = '{server_url}/v1/id_verification'
+        ASYNC_DOCUMENT_VERIFICATION = '{server_url}/v1/async_id_verification'
+
+    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
+        super().__init__(partner_id, api_key, call_back_url=call_back_url, api_version=1)
+
+
+class WebApiTestV2(WebApiBase):
+
+    class Urls(WebApiBase.Urls):
+        """ Inherited from Urls class From WebApiBase class and adds new fields """
+        DOCUMENT_VERIFICATION = '{server_url}/v2/verify'
+        ASYNC_DOCUMENT_VERIFICATION = '{server_url}/v2/verify_async'
+
+    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
+        super().__init__(partner_id, api_key, call_back_url=call_back_url, api_version=2)
+
+
+class WebApiLiveV1(WebApiTestV1):
     SERVER_URL = Servers.LIVE_SERVER_URL
 
 
-WebApi = WebApiTest
+class WebApiLiveV2(WebApiTestV2):
+    SERVER_URL = Servers.LIVE_SERVER_URL
+
+
+WebApi = WebApiTestV1
+WebApiV2 = WebApiTestV2
