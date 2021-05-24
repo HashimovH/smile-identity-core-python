@@ -9,9 +9,10 @@ from smile_id_core.signature import Signature
 
 class ApiBase:
     SERVER_URL: str
+    api_version = 1
     """This can be one of `constants.Servers` entries"""
 
-    def __init__(self, partner_id: str, api_key: str, api_version: int = 1):
+    def __init__(self, partner_id: str, api_key: str):
         """
         Initializes a new API instance.
 
@@ -30,7 +31,6 @@ class ApiBase:
 
         self.partner_id = partner_id
         self.signature = Signature(partner_id=partner_id, api_key=api_key)
-        self.api_version = api_version
 
     def _make_request(
         self, method: str, url: str, data: dict = None, expected_status=(HTTPStatus.OK,)

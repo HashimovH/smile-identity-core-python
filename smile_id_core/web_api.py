@@ -23,10 +23,9 @@ class WebApiBase(ApiBase):
         GET_SERVICES = "{server_url}/v{api_version}/services"
         UPLOAD = "{server_url}/v{api_version}/upload"
 
-    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None, api_version: int = 1):
-        super().__init__(partner_id, api_key, api_version)
+    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
+        super().__init__(partner_id, api_key)
         self.call_back_url = call_back_url
-        self.api_version = api_version
 
     def get_services(self):
         """
@@ -284,9 +283,7 @@ class WebApiTestV1(WebApiBase):
         """ Inherited from Urls class From WebApiBase class and adds new fields """
         DOCUMENT_VERIFICATION = '{server_url}/v1/id_verification'
         ASYNC_DOCUMENT_VERIFICATION = '{server_url}/v1/async_id_verification'
-
-    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
-        super().__init__(partner_id, api_key, call_back_url=call_back_url, api_version=1)
+    api_version = 1
 
 
 class WebApiTestV2(WebApiBase):
@@ -296,8 +293,7 @@ class WebApiTestV2(WebApiBase):
         DOCUMENT_VERIFICATION = '{server_url}/v2/verify'
         ASYNC_DOCUMENT_VERIFICATION = '{server_url}/v2/verify_async'
 
-    def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
-        super().__init__(partner_id, api_key, call_back_url=call_back_url, api_version=2)
+    api_version = 2
 
 
 class WebApiLiveV1(WebApiTestV1):
