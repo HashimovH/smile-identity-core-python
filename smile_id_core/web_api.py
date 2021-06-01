@@ -11,28 +11,27 @@ from smile_id_core.exceptions import ServerError, VerificationFailed
 from smile_id_core.image_upload import generate_zip_file, validate_images
 from smile_id_core.validation import IdValidation
 
-__all__ = ["WebApi", "WebApiLive", "WebApiTest"]
+__all__ = ["WebApi", "WebApiV2", "WebApiLiveV1", "WebApiLiveV2", "WebApiTestV1", "WebApiTestV2"]
 
 
-class WebApiTest(ApiBase):
+class WebApiBase(ApiBase):
     SERVER_URL = Servers.TEST_SERVER_URL
 
     class Urls:
-        GET_JOB_STATUS = "{server_url}/job_status"
-        GET_SERVICES = "{server_url}/services"
-        UPLOAD = "{server_url}/upload"
-        VERIFY_DOCUMENT = "{server_url}/id_verification"
+        """ API Base URL which are the same for each version """
+        GET_JOB_STATUS = "{server_url}/v{api_version}/job_status"
+        GET_SERVICES = "{server_url}/v{api_version}/services"
+        UPLOAD = "{server_url}/v{api_version}/upload"
 
     def __init__(self, partner_id: str, api_key: str, call_back_url: str = None):
         super().__init__(partner_id, api_key)
         self.call_back_url = call_back_url
 
-    @classmethod
-    def get_services(cls):
+    def get_services(self):
         """
         This method does not require API keys or partner ID
         """
-        return cls._make_request("GET", cls.Urls.GET_SERVICES)
+        return self._make_request("GET", self.Urls.GET_SERVICES)
 
     get_smile_id_services = get_services
 
@@ -52,39 +51,36 @@ class WebApiTest(ApiBase):
 
         return IdValidation.validate(data, verification_schema)
 
-    def verify_document(
-        self,
-        country: str,
-        id_type: str,
-        id_number: str,
-        first_name: str = None,
-        last_name: str = None,
-        dob: Union[str, date] = None,
-        job_id: str = None,
-        user_id: str = None,
+    def _prepare_document_verification_payload(
+            self,
+            country: str,
+            id_type: str,
+            id_number: str,
+            first_name: str = None,
+            last_name: str = None,
+            dob: Union[str, date] = None,
+            job_id: str = None,
+            user_id: str = None,
     ):
         """
-        Performs a document verification request with an immediate response.
+            Builds the payload for the request with the following parameters
 
-        :param country:
-        :param id_type:
-        :param id_number:
-        :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
-        :param last_name: Optional; required for some ID types
-        :param dob: Optional; required for some ID types. Can be a date
-        :param job_id: Optional; Will be passed to SmileID as partner parameters
-        :param user_id: Optional; Will be passed to SmileID as partner parameters
+            :param country:
+            :param id_type:
+            :param id_number:
+            :param first_name: Optional; required for some ID types, e.g. DRIVERS_LICENSE, PASSPORT
+            :param last_name: Optional; required for some ID types
+            :param dob: Optional; required for some ID types. Can be a date
+            :param job_id: Optional; Will be passed to SmileID as partner parameters
+            :param user_id: Optional; Will be passed to SmileID as partner parameters
 
-        :return: dict
+            :return: dict
         """
-
         try:
             dob = dob.isoformat()
         except AttributeError:
             pass
-
         signature, timestamp = self._get_signature()
-
         payload = {
             "sec_key": signature,
             "timestamp": timestamp,
@@ -97,6 +93,9 @@ class WebApiTest(ApiBase):
             "country": country,
             "id_type": id_type,
             "id_number": id_number,
+            "first_name": "",
+            "last_name": "",
+            "callback_url": self.call_back_url
         }
 
         if dob:
@@ -106,11 +105,34 @@ class WebApiTest(ApiBase):
         if last_name:
             payload["last_name"] = last_name
 
-        response = self._make_request("POST", self.Urls.VERIFY_DOCUMENT, payload)
+        return payload
+
+    def verify_document(self, **data):
+        """
+            Performs a document verification request with an immediate response.
+             **data consists of parameters for _prepare_document_verification_payload() method above to create payload
+             for request.
+            :return: dict
+        """
+        payload = self._prepare_document_verification_payload(**data)
+        response = self._make_request("POST", self.Urls.DOCUMENT_VERIFICATION,
+                                      payload)
 
         assert isinstance(response, dict)
         if response.get("ResultCode") != StatusCodes.SUCCESS:
             raise VerificationFailed(response)
+        return response
+
+    def verify_document_async(self, **data):
+        """
+            Performs a document verification request with an immediate response.
+             **data consists of parameters for _prepare_document_verification_payload() method above to create payload
+             for request.
+            :return: dict
+        """
+        payload = self._prepare_document_verification_payload(**data)
+        response = self._make_request("POST", self.Urls.ASYNC_DOCUMENT_VERIFICATION,
+                                      payload)
         return response
 
     def get_job_status(
@@ -255,8 +277,32 @@ class WebApiTest(ApiBase):
         return resp
 
 
-class WebApiLive(WebApiTest):
+class WebApiTestV1(WebApiBase):
+
+    class Urls(WebApiBase.Urls):
+        """ Inherited from Urls class From WebApiBase class and adds new fields """
+        DOCUMENT_VERIFICATION = '{server_url}/v1/id_verification'
+        ASYNC_DOCUMENT_VERIFICATION = '{server_url}/v1/async_id_verification'
+    api_version = 1
+
+
+class WebApiTestV2(WebApiBase):
+
+    class Urls(WebApiBase.Urls):
+        """ Inherited from Urls class From WebApiBase class and adds new fields """
+        DOCUMENT_VERIFICATION = '{server_url}/v2/verify'
+        ASYNC_DOCUMENT_VERIFICATION = '{server_url}/v2/verify_async'
+
+    api_version = 2
+
+
+class WebApiLiveV1(WebApiTestV1):
     SERVER_URL = Servers.LIVE_SERVER_URL
 
 
-WebApi = WebApiTest
+class WebApiLiveV2(WebApiTestV2):
+    SERVER_URL = Servers.LIVE_SERVER_URL
+
+
+WebApi = WebApiTestV1
+WebApiV2 = WebApiTestV2

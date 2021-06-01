@@ -9,6 +9,7 @@ from smile_id_core.signature import Signature
 
 class ApiBase:
     SERVER_URL: str
+    api_version = 1
     """This can be one of `constants.Servers` entries"""
 
     def __init__(self, partner_id: str, api_key: str):
@@ -17,6 +18,7 @@ class ApiBase:
 
         :param partner_id: A unique number assigned to your account, as a 3-digit string, eg. "123"
         :param api_key: A raw API key
+        :param api_version: A version of API
         """
         if not partner_id:
             raise ValueError("Parameter 'partner_id' cannot be empty")
@@ -30,16 +32,15 @@ class ApiBase:
         self.partner_id = partner_id
         self.signature = Signature(partner_id=partner_id, api_key=api_key)
 
-    @classmethod
     def _make_request(
-        cls, method: str, url: str, data: dict = None, expected_status=(HTTPStatus.OK,)
+        self, method: str, url: str, data: dict = None, expected_status=(HTTPStatus.OK,)
     ):
         method = method.lower()
         request = getattr(requests, method)
         if method != "get" and data is not None:
             data = json.dumps(data)
 
-        url = url.format(server_url=cls.SERVER_URL)
+        url = url.format(server_url=self.SERVER_URL, api_version=self.api_version)
 
         response: requests.Response = request(
             url,
