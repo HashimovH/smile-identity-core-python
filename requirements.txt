@@ -1,4 +1,4 @@
 requests==2.24.0
-pycryptodome==3.9.8
+pycryptodome==3.10.4
 black==20.8b1
 pytest
