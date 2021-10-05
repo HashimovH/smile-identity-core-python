@@ -24,6 +24,6 @@ setup(
     author_email="support@smileidentity.com",
     install_requires=[
         "requests ~= 2.24.0",
-        "pycryptodome ~= 3.9.8",
+        "pycryptodome ~= 3.10.3",
     ],
 )
